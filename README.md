@@ -45,46 +45,50 @@ The AI works on the student's own material. It scores, extracts, transcribes, qu
 ## Architecture
 
 ```mermaid
-flowchart LR
-    U["Student's browser<br/>(India)"]
+flowchart TB
+    U["Student's browser · India"]
 
-    subgraph Vercel["Vercel · Mumbai edge"]
-        FE["Next.js 14<br/>TypeScript · Tailwind"]
+    subgraph V["Vercel · Mumbai edge"]
+        FE["Next.js 14 · TypeScript · Tailwind"]
     end
 
-    subgraph Railway["Railway · Singapore"]
-        API["FastAPI<br/>Python · uvicorn"]
+    subgraph R["Railway · Singapore"]
+        direction LR
+        API["FastAPI · uvicorn"]
+        GW["AI gateway<br/>(one module)"]
+        EMB["Embeddings<br/>MiniLM on CPU"]
         SCH["APScheduler<br/>(in-process)"]
-        EMB["sentence-transformers<br/>all-MiniLM-L6-v2 · CPU"]
-        GW["AI gateway<br/>(single module)"]
     end
 
-    subgraph Supabase["Supabase · Singapore"]
-        PG[("PostgreSQL<br/>+ pgvector")]
+    subgraph S["Supabase · Singapore"]
+        direction LR
+        PG[("Postgres + pgvector")]
         AUTH["Auth"]
         ST["Storage"]
     end
 
-    LLM["DeepSeek<br/>(text tasks)"]
-    VIS["OpenRouter<br/>(vision / OCR)"]
-    PAY["Razorpay<br/>subscriptions + webhooks"]
-    OBS["Sentry · PostHog · GTM/GA4"]
-    MAIL["Resend<br/>(email)"]
+    subgraph X["Third-party services"]
+        direction LR
+        LLM["DeepSeek<br/>text tasks"]
+        VIS["OpenRouter<br/>vision / OCR"]
+        PAY["Razorpay<br/>subscriptions"]
+        MAIL["Resend<br/>email"]
+        OBS["Sentry · PostHog<br/>GTM / GA4"]
+    end
 
     U --> FE
-    U -- "signed-URL upload" --> ST
+    U -- "upload via signed URL" --> ST
     FE -- "REST + SSE" --> API
     FE --> AUTH
-    API --> PG
-    API --> ST
     API --> EMB
     API --> GW
+    API --> PG
+    API --> ST
+    SCH --> PG
     GW --> LLM
     GW --> VIS
-    API <--> PAY
-    SCH --> PG
+    API <-- "checkout + webhooks" --> PAY
     SCH --> MAIL
-    FE -.-> OBS
     API -.-> OBS
 ```
 
